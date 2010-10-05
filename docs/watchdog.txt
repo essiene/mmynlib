@@ -1,0 +1,24 @@
+The watchdog module is a behaviour designed to keep the children of a
+simple_one_for_one supervisor running.
+
+watchdog, unlike a simple_one_for_one supervisor, is able to restart
+a child, if it dies, by calling it with the parameters it was created
+with, which is probably different for each simple_one_for_one child.
+
+Also, watchdog unlike a simple_one_for_one supervisor, implements
+incremental backoff when trying to [re]start the child process.
+
+This allows for a well behaved module that auguments the functions of
+a simple_one_for_one supervisor.
+
+watchdog does not replace simple_one_for_one supervisors, but augments
+their functionality.
+
+Contraints
+----------
+    - Should very simple and non-invasive to the watched processes
+    - Designed to be used ONLY with simple_one_for_one supervisors
+    - Designed to be supervised at the _same_ level with its related
+      supervisor.
+    - Should concentrate only on keeping the children alive, restarting
+      them and providing helper apis to help with managing that

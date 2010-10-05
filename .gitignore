@@ -1,0 +1,17 @@
+*~
+.*.swp
+build
+dist
+commit
+diff
+*.beam
+erl_crash.dump
+*.tar.*
+*.tar
+*.boot
+*.script
+*.zip
+*.rpm
+*.patch
+rel/simreg
+ebin

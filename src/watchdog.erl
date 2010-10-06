@@ -30,6 +30,20 @@ handle_call(R, _F, St) ->
 handle_cast(_R, St) ->
     {noreply, St}.
 
+handle_info({start_child, Id, Cur}, St) ->
+    start_child(St, Id, Cur);
+handle_info(timeout, #st_watchdog{num_children=NumChildren}=St) ->
+    start_all(St, NumChildren),
+    {noreply, St};
+handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, children=Ets}=St) ->
+    case ets:lookup(Ets, Pid) of
+        [] ->
+            ok;
+        [{Pid, Id}] -> 
+            error_logger:error_msg("Child with id ~p, died for reason: ~p", [Id, Reason]),
+            start_child(St, Id, Min)
+    end,
+    {noreply, St};
 handle_info(_R, St) ->
     {noreply, St}.
 

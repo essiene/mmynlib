@@ -15,18 +15,11 @@ start_link(SupName, Module, Args) ->
 
 
 
-
-
-
-
-
-
-
 init([Mod|Args]) ->
     case Mod:init(Args) of
-        {ok, {SupMod, ChildArgs, RestartSpec, NumChildren}} ->
-                {ok, #st_watchdog{sup=SupMod, args=ChildArgs, restart=RestartSpec,
-                        num_children=NumChildren, children=[]}, 5000};
+        {ok, {Sup, ChildArgs, {Min, _, _}=RestartSpec, NumChildren}} ->
+                {ok, #st_watchdog{sup=Sup, args=ChildArgs, restart=RestartSpec,
+                        num_children=NumChildren, children=ets:new(ets, [private, set, {keypos, 1}])}, Min};
         ignore ->
             ignore
     end.

@@ -10,9 +10,8 @@
 start_link(Module, Args) ->
     gen_server:start_link(?MODULE, [Module|Args], []).
 
-start_link(SupName, Module, Args) ->
-    gen_server:start_link(SupName, ?MODULE, [Module|Args], []).
-
+start_link(Name, Module, Args) ->
+    gen_server:start_link(Name, ?MODULE, [Module|Args], []).
 
 
 init([Mod|Args]) ->

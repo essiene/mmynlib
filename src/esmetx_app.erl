@@ -1,4 +1,4 @@
--module(mmyn_app).
+-module(esmetx_app).
 
 -behaviour(application).
 
@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    mmyn_sup:start_link().
+    esmetx_sup:start_link().
 
 stop(_State) ->
     ok.

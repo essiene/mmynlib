@@ -1,12 +1,12 @@
-{application, mmyn,
+{application, esmetx,
  [
   {description, ""},
-  {vsn, "0.1"},
+  {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { mmyn_app, []}},
+  {mod, { esmetx_app, []}},
   {env, []}
  ]}.

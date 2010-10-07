@@ -1,5 +1,5 @@
 
--module(mmyn_sup).
+-module(esmetx_sup).
 
 -behaviour(supervisor).
 

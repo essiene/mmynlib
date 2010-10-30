@@ -16,13 +16,17 @@ behaviour_info(_Other) ->
 
 
 start_link(Module, Args) ->
-    gen_server:start_link(?MODULE, [Module|Args], []).
+    gen_server:start_link(?MODULE, [watchdog, Module|Args], []).
 
 start_link(Name, Module, Args) ->
-    gen_server:start_link(Name, ?MODULE, [Module|Args], []).
+    gen_server:start_link(Name, ?MODULE, [watchdog, Module|Args], []).
 
 
-init([Mod|Args]) ->
+init([supervisor, MaxR, MaxT, ChildSpec]) ->
+    {ok, {{simple_one_for_one, MaxR, MaxT}, [ChildSpec]}};
+
+init([watchdog, Mod|Args]) ->
+    process_flag(trap_exit, true),
     case Mod:init(Args) of
         {ok, {Sup, ChildArgs, {Min, _, _}=RestartSpec, NumChildren}} ->
                 {ok, #st_watchdog{sup=Sup, args=ChildArgs, restart=RestartSpec,

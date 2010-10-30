@@ -27,7 +27,9 @@ init([Mod|Args]) ->
                 {ok, #st_watchdog{sup=Sup, args=ChildArgs, restart=RestartSpec,
                         num_children=NumChildren, children=ets:new(ets, [private, set, {keypos, 1}])}, Min};
         ignore ->
-            ignore
+            ignore;
+        Other ->
+            {stop, {bad_return, Mod, init, Other}}
     end.
 
 handle_call(R, _F, St) ->

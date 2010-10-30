@@ -39,8 +39,8 @@ handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, c
         [] ->
             ok;
         [{Pid, Id}] -> 
-            error_logger:error_msg("Child with id ~p, died for reason: ~p", [Id, Reason]),
-            start_child(St, Id, Min)
+            error_logger:error_msg("Child with id ~p, died for reason: ~p~n", [Id, Reason]),
+            sched_restart_child(St, Id, Min)
     end,
     {noreply, St};
 handle_info(_R, St) ->
@@ -81,4 +81,4 @@ sched_restart_child(#st_watchdog{restart={_,Max,_}}, Id, Cur) when Cur >= Max ->
     erlang:send_after(Max, self(), {start_child, Id, Max});
 sched_restart_child(#st_watchdog{restart={_,_,Delta}}, Id, Cur) ->
     Next = Cur + Delta,
-    erlang:send_after(Next, self(), {start_child, Id, Next}).
+    erlang:send_after(Cur, self(), {start_child, Id, Next}).

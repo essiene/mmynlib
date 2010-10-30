@@ -67,7 +67,7 @@ start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) ->
             child_started(St, Id, Pid),
             {noreply, St};
         {error, Reason} ->
-            error_logger:error_msg("Error: ~p while starting child ~p", [Reason, Id]),
+            error_logger:error_msg("Error: ~p while starting child ~p~n", [Reason, Id]),
             sched_restart_child(St, Id, Cur),
             {noreply, St}
     end.
@@ -75,7 +75,7 @@ start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) ->
 child_started(#st_watchdog{children=Ets}, Id, Pid) -> 
     ets:insert(Ets, {Pid, Id}),
     erlang:monitor(process, Pid),
-    error_logger:info_msg("Started child: ~p", [Id]).
+    error_logger:info_msg("Started child: ~p~n", [Id]).
 
 sched_restart_child(#st_watchdog{restart={_,Max,_}}, Id, Cur) when Cur >= Max ->
     erlang:send_after(Max, self(), {start_child, Id, Max});

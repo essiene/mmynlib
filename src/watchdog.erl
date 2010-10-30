@@ -4,7 +4,14 @@
 
 -export([start_link/2, start_link/3]).
 
+-export([behaviour_info/1]).
+
 -record(st_watchdog, {sup, args, restart, num_children, children}).
+
+behaviour_info(callbacks) ->
+    [{init, 1}];
+behaviour_info(_Other) ->
+    undefined.
 
 
 start_link(Module, Args) ->

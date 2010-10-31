@@ -3,7 +3,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
--export([start_link/2, start_link/3]).
+-export([start_link/2, start_link/3, stop/1]).
 
 -export([behaviour_info/1]).
 
@@ -20,6 +20,9 @@ start_link(Module, Args) ->
 
 start_link(Name, Module, Args) ->
     gen_server:start_link(Name, ?MODULE, [watchdog, Module|Args], []).
+
+stop(Ref) ->
+    gen_server:cast(Ref, {'$watchdog', stop}).
 
 
 init([supervisor, MaxR, MaxT, ChildSpec]) ->
@@ -59,6 +62,8 @@ init([watchdog, Mod|Args]) ->
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.
 
+handle_cast({'$watchdog', stop}, St) ->
+    {stop, normal, St};
 handle_cast(_R, St) ->
     {noreply, St}.
 

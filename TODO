@@ -1,5 +1,4 @@
 -watchdog
-    - stop(Pid)
     - exit_child(Pid, Id, signal)
     - restart_child(Pid, Id).
     - shutdown_child(Pid, Id).

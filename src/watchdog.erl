@@ -28,9 +28,20 @@ init([supervisor, MaxR, MaxT, ChildSpec]) ->
 init([watchdog, Mod|Args]) ->
     process_flag(trap_exit, true),
     case Mod:init(Args) of
-        {ok, {Sup, ChildArgs, {Min, _, _}=RestartSpec, NumChildren}} ->
-                {ok, #st_watchdog{sup=Sup, args=ChildArgs, restart=RestartSpec,
-                        num_children=NumChildren, children=ets:new(ets, [private, set, {keypos, 1}])}, Min};
+        {ok, {ChildId, {M,F,ChildArgs}, _Restart, Shutdown, Type, Modules},
+          {NumChildren, {MaxR, MaxT}, {_Min,_Max,_Delta}=RestartSpec}} ->
+            ChildSpec = {ChildId, {M,F,[]}, temporary, Shutdown, Type, Modules},
+            case supervisor:start_link(?MODULE, [supervisor, MaxR, MaxT, ChildSpec]) of
+                    ignore ->
+                        ignore;
+                    {error, Error} ->
+                        {stop, Error};
+                    {ok, Pid} ->
+                        {ok, #st_watchdog{sup=Pid, args=ChildArgs, 
+                           restart=RestartSpec, num_children=NumChildren, 
+                           children=ets:new(ets, [private, set, 
+                                   {keypos, 1}])}, 500}
+           end;
         ignore ->
             ignore;
         Other ->

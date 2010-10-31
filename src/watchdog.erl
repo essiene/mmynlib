@@ -25,6 +25,14 @@ start_link(Name, Module, Args) ->
 init([supervisor, MaxR, MaxT, ChildSpec]) ->
     {ok, {{simple_one_for_one, MaxR, MaxT}, [ChildSpec]}};
 
+%% The init spec is now:
+% Mod:init/1 ->
+% {ok, ChildSpec, WatchDogSpec}
+%   ChildSpec is a normal child spec to a supervisor
+%   WatchDogSpec -> 
+%       {NumChildren, {MaxRestart, MaxTime}, {MinWait, MaxWait, WaitDelta}}
+%       NumChildren -> integer()
+%
 init([watchdog, Mod|Args]) ->
     process_flag(trap_exit, true),
     case Mod:init(Args) of

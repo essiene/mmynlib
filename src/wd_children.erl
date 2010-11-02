@@ -1,5 +1,6 @@
 -module(wd_children).
--export([new/0, info/0, process_down/2]).
+-export([new/0, info/1, process_down/2, process_up/3]).
+-export([child_new/1, child_restarted/1, child_died/2, child_info/2]).
 
 -record(wd_children, {pidmap, ets}).
 -record(wd_child, {id, starttime, startups, total_uptime}).

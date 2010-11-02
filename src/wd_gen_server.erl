@@ -2,8 +2,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
--record(st_watchdog, {sup, args, restart, num_children, children, pidmap}).
--record(wd_child, {id, starttime, startups, total_uptime}).
+-record(st_watchdog, {sup, args, restart, num_children, children}).
 
 
 
@@ -29,8 +28,7 @@ init([Mod|Args]) ->
                     {ok, Pid} ->
                         {ok, #st_watchdog{sup=Pid, args=ChildArgs, 
                            restart=RestartSpec, num_children=NumChildren, 
-                           children=ets:new(ets, [private, set, 
-                                   {keypos, 2}]), pidmap=[]}, 500}
+                           children=wd_children:new()}, 500}
            end;
         ignore ->
             ignore;
@@ -38,10 +36,8 @@ init([Mod|Args]) ->
             {stop, {bad_return, Mod, init, Other}}
     end.
 
-handle_call({'$watchdog', which_children}, _F, #st_watchdog{pidmap=PidMap, children=Ets}=St) ->
-    ChildStats = fun(Child, Accm) -> [child_info(Child, PidMap)|Accm] end,
-    Stats = ets:foldl(ChildStats, [], Ets),
-    {reply, Stats, St};
+handle_call({'$watchdog', which_children}, _F, #st_watchdog{children=C}=St) ->
+    {reply, wd_children:info(C), St};
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.
 
@@ -55,21 +51,15 @@ handle_info({start_child, Id, Cur}, St) ->
 handle_info(timeout, #st_watchdog{num_children=NumChildren}=St) ->
     start_all(St, NumChildren),
     {noreply, St};
-handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, children=Ets, pidmap=PidMap0}=St) ->
-    case lists:keytake(Pid, 1, PidMap0) of
-        false ->
+handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, children=C0}=St) ->
+    case wd_children:process_down(C0, Pid) of
+        {error, pid_not_found} ->
             error_logger:error_msg("Unwatched Child with pid ~p, died for reason: ~p~n", [Pid, Reason]),
             {noreply, St};
-        {value, {Pid, Id}, PidMap1} ->
-            St1 = St#st_watchdog{pidmap=PidMap1},
-            case ets:lookup(Ets, Id) of
-                [] ->
-                    ok;
-                [Child] -> 
-                    child_died(Child, St1),
-                    error_logger:error_msg("Child with id ~p, died for reason: ~p~n", [Id, Reason]),
-                    sched_restart_child(St1, Id, Min)
-            end,
+        {C1, Id} ->
+            St1 = St#st_watchdog{children=C1},
+            error_logger:error_msg("Child with id ~p, died for reason: ~p~n", [Id, Reason]),
+            sched_restart_child(St1, Id, Min),
             {noreply, St1}
     end;
 handle_info(_R, St) ->
@@ -101,49 +91,14 @@ start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) ->
             {noreply, St}
     end.
 
-child_started(#st_watchdog{children=Ets, pidmap=PidMap0}=St, Id, Pid) -> 
-    PidMap1 = [{Pid, Id}|PidMap0],
-    WdChild = case ets:lookup(Ets, Id) of 
-        [] ->
-            child_new(Id);
-        [Child] -> 
-            child_restarted(Child)
-    end,
-    ets:insert(Ets, WdChild),
+child_started(#st_watchdog{children=C0}=St, Id, Pid) -> 
     erlang:monitor(process, Pid),
+    C1= wd_children:process_up(C0, Pid, Id),
     error_logger:info_msg("Started child: ~p~n", [Id]),
-    St#st_watchdog{pidmap=PidMap1}.
+    St#st_watchdog{children=C1}.
 
 sched_restart_child(#st_watchdog{restart={_,Max,_}}, Id, Cur) when Cur >= Max ->
     erlang:send_after(Max, self(), {start_child, Id, Max});
 sched_restart_child(#st_watchdog{restart={_,_,Delta}}, Id, Cur) ->
     Next = Cur + Delta,
     erlang:send_after(Cur, self(), {start_child, Id, Next}).
-
-child_new(Id) ->
-    StartTime = erlang:now(),
-    #wd_child{id=Id, starttime=StartTime, startups=1, total_uptime=0}.
-
-child_restarted(#wd_child{startups=Startups0}=Child) ->
-    StartTime = erlang:now(),
-    Child#wd_child{starttime=StartTime, startups=Startups0+1}.
-
-child_died(#wd_child{starttime=T0, total_uptime=Tup0}=Child0, #st_watchdog{children=Ets}) ->
-    T1 = erlang:now(),
-    Uptime = timer:now_diff(T1, T0),
-    Tup1 = Tup0 + Uptime,
-    Child1 = Child0#wd_child{total_uptime=Tup1},
-    ets:insert(Ets, Child1).
-
-child_info(#wd_child{id=Id, starttime=T1, startups=StrtUps, total_uptime=Tup}, PidMap) ->
-    {Pid, Uptime} = case lists:keysearch(Id, 2, PidMap) of
-        false ->
-            {down, 0};
-        {value, {Pid0, Id}} ->
-            Now = erlang:now(),
-            Upt = timer:now_diff(Now, T1) div 1000000, %microsecs to secs
-            {Pid0, Upt}
-    end,
-    Tup1 = Tup div 1000000 + Uptime,
-    TupAvg = Tup1 div StrtUps,
-    {Id, Pid, calendar:now_to_datetime(T1), StrtUps, Uptime, Tup1, TupAvg}.

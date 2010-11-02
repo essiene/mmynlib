@@ -1,6 +1,7 @@
 -module(wd_children).
--export([new/0, info/1, process_down/2, process_up/3]).
+-export([new/0, info/1, info/2, process_down/2, process_up/3]).
 -export([child_new/1, child_restarted/1, child_died/2, child_info/2]).
+-export([exit/2, exit/3]).
 
 -record(wd_children, {pidmap, ets}).
 -record(wd_child, {id, starttime, startups, total_uptime}).
@@ -16,6 +17,29 @@ info(#wd_children{pidmap=P, ets=T}) ->
             [child_info(Child, P)|Accm] 
     end,
     ets:foldl(StatsFun, [], T).
+
+info(#wd_children{pidmap=P, ets=T}, Id) ->
+    case ets:lookup(T, Id) of
+        [] ->
+            {error, not_found};
+        [Child] ->
+            child_info(Child, P)
+    end.
+
+exit(#wd_children{pidmap=P}, Signal) ->
+    ExitAllFun = fun({Pid, _}) ->
+            erlang:exit(Pid, Signal)
+    end,
+    lists:foreach(ExitAllFun, P).
+
+
+exit(#wd_children{pidmap=P}, Id, Signal) ->
+    case lists:keysearch(Id, 2, P) of
+        false ->
+            {error, not_found};
+        {value, {Pid, Id}} ->
+            erlang:exit(Pid, Signal)
+    end.
 
 process_down(#wd_children{pidmap=P0, ets=T}=C, Pid) ->
     case lists:keytake(Pid, 1, P0) of

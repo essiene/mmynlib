@@ -3,7 +3,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
--export([start_link/2, start_link/3, stop/1]).
+-export([start_link/2, start_link/3, stop/1, which_children/1]).
 
 -export([behaviour_info/1]).
 
@@ -24,6 +24,9 @@ start_link(Name, Module, Args) ->
 
 stop(Ref) ->
     gen_server:cast(Ref, {'$watchdog', stop}).
+
+which_children(Ref) ->
+    gen_server:call(Ref, {'$watchdog', which_children}).
 
 
 init([supervisor, MaxR, MaxT, ChildSpec]) ->
@@ -60,6 +63,10 @@ init([watchdog, Mod|Args]) ->
             {stop, {bad_return, Mod, init, Other}}
     end.
 
+handle_call({'$watchdog', which_children}, _F, #st_watchdog{pidmap=PidMap, children=Ets}=St) ->
+    ChildStats = fun(Child, Accm) -> [child_info(Child, PidMap)|Accm] end,
+    Stats = ets:foldl(ChildStats, [], Ets),
+    {reply, Stats, St};
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.
 

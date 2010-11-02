@@ -73,15 +73,23 @@ handle_info({start_child, Id, Cur}, St) ->
 handle_info(timeout, #st_watchdog{num_children=NumChildren}=St) ->
     start_all(St, NumChildren),
     {noreply, St};
-handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, children=Ets}=St) ->
-    case ets:lookup(Ets, Pid) of
-        [] ->
-            ok;
-        [{Pid, Id}] -> 
-            error_logger:error_msg("Child with id ~p, died for reason: ~p~n", [Id, Reason]),
-            sched_restart_child(St, Id, Min)
-    end,
-    {noreply, St};
+handle_info({'DOWN', _, process, Pid, Reason}, #st_watchdog{restart={Min,_,_}, children=Ets, pidmap=PidMap0}=St) ->
+    case lists:keytake(Pid, 1, PidMap0) of
+        false ->
+            error_logger:error_msg("Unwatched Child with pid ~p, died for reason: ~p~n", [Pid, Reason]),
+            {noreply, St};
+        {value, {Pid, Id}, PidMap1} ->
+            St1 = St#st_watchdog{pidmap=PidMap1},
+            case ets:lookup(Ets, Id) of
+                [] ->
+                    ok;
+                [Child] -> 
+                    child_died(Child, St1),
+                    error_logger:error_msg("Child with id ~p, died for reason: ~p~n", [Id, Reason]),
+                    sched_restart_child(St1, Id, Min)
+            end,
+            {noreply, St1}
+    end;
 handle_info(_R, St) ->
     {noreply, St}.
 

@@ -111,10 +111,18 @@ start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) ->
             {noreply, St}
     end.
 
-child_started(#st_watchdog{children=Ets}, Id, Pid) -> 
-    ets:insert(Ets, {Pid, Id}),
+child_started(#st_watchdog{children=Ets, pidmap=PidMap0}=St, Id, Pid) -> 
+    PidMap1 = [{Pid, Id}|PidMap0],
+    WdChild = case ets:lookup(Ets, Id) of 
+        [] ->
+            child_new(Id);
+        [Child] -> 
+            child_restarted(Child)
+    end,
+    ets:insert(Ets, WdChild),
     erlang:monitor(process, Pid),
-    error_logger:info_msg("Started child: ~p~n", [Id]).
+    error_logger:info_msg("Started child: ~p~n", [Id]),
+    St#st_watchdog{pidmap=PidMap1}.
 
 sched_restart_child(#st_watchdog{restart={_,Max,_}}, Id, Cur) when Cur >= Max ->
     erlang:send_after(Max, self(), {start_child, Id, Max});

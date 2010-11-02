@@ -1,13 +1,7 @@
 -watchdog
-    - exit_child(Pid, Id, signal)
-    - restart_child(Pid, Id).
-    - shutdown_child(Pid, Id).
-    - kill_child(Pid, Id).
     - num_children(Pid).
     - add_child(Pid).
-    - which_children(Pid) -> [{Id, Pid|undefined, 
-                last_start_time, numrestart, current_uptime, total_uptime, avguptime}]
-    - child_info/2
+    - remove_child(Pid, Id).
     - child_spec(Pid) -> ChildSpec
 
     - think carefully about also monitoring:

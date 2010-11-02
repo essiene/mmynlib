@@ -5,14 +5,15 @@ processes which it supervises up and running. It differs from a normal
 supervisor in that it applies a simple backoff mechanism when restarting
 its watched processes.
 
-watchdog does not replace simple_one_for_one supervisors, but provides a 
-slightly different view to managing processes uptime.
+watchdog is closest to, but is not a replacement for 
+simple_one_for_one supervisors, rather it provides a slightly different view 
+to managing processes uptime.
 
 Contraints
 ----------
-    - Should very simple and _almost_ non-invasive to the watched processes
-    - Should feel very much like a simple_one_for_one supervisor except 
-      when not.
+    - Should be very simple and _almost_ non-invasive to the watched processes
+    - Should feel very much like a simple_one_for_one supervisor (except 
+      when not)
     - Should fit seamlessly into a supervision tree.
     - Should concentrate only on keeping the children alive, restarting
       them and providing helper apis to help with managing that.
@@ -22,7 +23,7 @@ Contraints
 Overview
 --------
 Watchdog is really a gen_server wrapping up access to a simple_one_for_one
-supervisor. While providing the restart services itself.
+supervisor, while providing the restart services itself.
 
 The child spec is added to the simple_one_for_one supervisor, with the childs
 restart type set to 'temporary' by the gen_server. This is done so that
@@ -45,7 +46,7 @@ Initialization
 During initialization, the module implementing the watchdog behaviour needs 
 to supply the following:
     - A ChildSpec as expected by a supervisor in the [ChildSpec] list
-    - The total number children to restart. Watchdog will always strive to 
+    - The total number of children to run. Watchdog will always strive to 
       ensure this number of children are running. It will continually retry
       starting dead children untill all are up and running.
     - The watchdog restart spec which looks like {Min, Max, Delta}:
@@ -56,7 +57,7 @@ to supply the following:
           dies and is restarted, if that restart is not successfull, watchdog
           will backoff a bit then attempt the restart again. It will keep doing
           this until the child starts successfully or the backoff interval
-          reaches Max. At which point, it won't increase the backoff interval
+          reaches Max, At which point, it won't increase the backoff interval
           anymore.
         - Delta is the backoff delta b/w failed restarts.
 
@@ -73,10 +74,10 @@ total number of children.
 
 Child Ids
 ---------
-Just like a normal supervisor (except the simple_one_for_one), the watchdog
-has a concept of child Ids. This is used to uniquely identify the child 
-instance regardless of its current Pid or even if its currently running or 
-is waiting to be restarted.
+Unlike a simple_one_for_one supervisor, (and more like other supervisor 
+schemes), the watchdog has a concept of child Ids. This is used to uniquely 
+identify the child instance regardless of its current Pid or even if it is 
+currently running or is waiting to be restarted.
 
 This child Ids can be used to access various information on the child 
 processes and to control the child processes without knowing their Pid.
@@ -103,10 +104,26 @@ information for each child Id in an ETS table which can be queried:
       uptime is a measure of the time between the last StartTime and the
       time the watchdog recieved a 'DOWN' message for that child id
 
-Watchdog then keeps a Pid:Id map in its state that relates a ChildId to its
+Watchdog then keeps a Pid to Id map in its state that relates a ChildId to its
 current running Pid (if the child is currently running ofcourse).
 
 These characteristics are reported by watchdog:which_children/1, and
 watchdog:child_info/2
+
+Managing Watchdog
+-----------------
+The watchdog interface is pretty simple and exposes just two functions for
+managing the watchdog itself. Every other function is either for inspection
+or managing the children.
+
+    - start_link - Starts the watchdog callback
+    - stop - Shuts down the watchdog callback cleanly
+
+
+Integrating With Children
+--------------------------
+
+Managing Watchdog Children
+--------------------------
 
 

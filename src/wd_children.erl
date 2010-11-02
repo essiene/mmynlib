@@ -5,28 +5,27 @@
 -record(wd_child, {id, starttime, startups, total_uptime}).
 
 
-wd_children:new() ->
+new() ->
     P = [],
     T = ets:new(ets, [private, set, {keypos, 2}]),
-    #wd_children{pidmap=PidMap, ets=IdTable}.
+    #wd_children{pidmap=P, ets=T}.
 
-wd_children:info(#wd_children{pidmap=P, ets=T}) ->
+info(#wd_children{pidmap=P, ets=T}) ->
     StatsFun = fun(Child, Accm) -> 
             [child_info(Child, P)|Accm] 
     end,
     ets:foldl(StatsFun, [], T).
 
-wd_children:process_down(#wd_children{pidmap=P0, ets=T}=C0, Pid) ->
+process_down(#wd_children{pidmap=P0, ets=T}=C, Pid) ->
     case lists:keytake(Pid, 1, P0) of
         false ->
             {error, pid_not_found};
         {value, {Pid, Id}, P1} ->
-            C1 = C0#wd_children{pidmap=P1},
             case ets:lookup(T, Id) of
                 [] ->
                     ok;
                 [Child] -> 
-                    child_died(Child, C1),
+                    child_died(Child, T)
             end,
-            {C1, Id}
+            {C#wd_children{pidmap=P1}, Id}
     end.

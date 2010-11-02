@@ -100,11 +100,11 @@ start_all(#st_watchdog{restart={Min, _, _}}=St, ChildId) ->
 start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) -> 
     case supervisor:start_child(Sup, [Id|Args]) of
         {ok, Pid} ->
-            child_started(St, Id, Pid),
-            {noreply, St};
+            St1 = child_started(St, Id, Pid),
+            {noreply, St1};
         {ok, Pid, _Info} ->
-            child_started(St, Id, Pid),
-            {noreply, St};
+            St1 = child_started(St, Id, Pid),
+            {noreply, St1};
         {error, Reason} ->
             error_logger:error_msg("Error: ~p while starting child ~p~n", [Reason, Id]),
             sched_restart_child(St, Id, Cur),

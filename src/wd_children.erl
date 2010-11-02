@@ -29,3 +29,42 @@ process_down(#wd_children{pidmap=P0, ets=T}=C, Pid) ->
             end,
             {C#wd_children{pidmap=P1}, Id}
     end.
+
+process_up(#wd_children{pidmap=P0, ets=T}=C, Pid, Id) ->
+    P1 = [{Pid, Id}|P0],
+    Child = case ets:lookup(T, Id) of 
+        [] ->
+            child_new(Id);
+        [FoundChild] -> 
+            child_restarted(FoundChild)
+    end,
+    ets:insert(T, Child),
+    C#wd_children{pidmap=P1}.
+
+child_new(Id) ->
+    StartTime = erlang:now(),
+    #wd_child{id=Id, starttime=StartTime, startups=1, total_uptime=0}.
+
+child_restarted(#wd_child{startups=Startups0}=Child) ->
+    StartTime = erlang:now(),
+    Child#wd_child{starttime=StartTime, startups=Startups0+1}.
+
+child_died(#wd_child{starttime=T0, total_uptime=Tup0}=Child0, T) ->
+    T1 = erlang:now(),
+    Uptime = timer:now_diff(T1, T0),
+    Tup1 = Tup0 + Uptime,
+    Child1 = Child0#wd_child{total_uptime=Tup1},
+    ets:insert(T, Child1).
+
+child_info(#wd_child{id=Id, starttime=T1, startups=StrtUps, total_uptime=Tup}, PidMap) ->
+    {Pid, Uptime} = case lists:keysearch(Id, 2, PidMap) of
+        false ->
+            {down, 0};
+        {value, {Pid0, Id}} ->
+            Now = erlang:now(),
+            Upt = timer:now_diff(Now, T1) div 1000000, %microsecs to secs
+            {Pid0, Upt}
+    end,
+    Tup1 = Tup div 1000000 + Uptime,
+    TupAvg = Tup1 div StrtUps,
+    {Id, Pid, calendar:now_to_datetime(T1), StrtUps, Uptime, Tup1, TupAvg}.

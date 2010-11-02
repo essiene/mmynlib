@@ -153,3 +153,15 @@ child_died(#wd_child{starttime=T0, total_uptime=Tup0}=Child0, #st_watchdog{child
     Child1 = Child0#wd_child{total_uptime=Tup1},
     ets:insert(Ets, Child1).
 
+child_info(#wd_child{id=Id, starttime=T1, startups=StrtUps, total_uptime=Tup}, PidMap) ->
+    {Pid, Uptime} = case lists:keysearch(Id, 2, PidMap) of
+        false ->
+            {down, 0};
+        {value, {Pid0, Id}} ->
+            Now = erlang:now(),
+            Upt = timer:now_diff(Now, T1) div 1000000, %microsecs to secs
+            {Pid0, Upt}
+    end,
+    Tup1 = Tup div 1000000 + Uptime,
+    TupAvg = Tup1 div StrtUps,
+    {Id, Pid, calendar:now_to_datetime(T1), StrtUps, Uptime, Tup1, TupAvg}.

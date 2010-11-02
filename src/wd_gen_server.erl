@@ -36,11 +36,19 @@ init([Mod|Args]) ->
             {stop, {bad_return, Mod, init, Other}}
     end.
 
+handle_call({'$watchdog', {child_info, Id}}, _F, #st_watchdog{children=C}=St) ->
+    {reply, wd_children:info(C, Id), St};
 handle_call({'$watchdog', which_children}, _F, #st_watchdog{children=C}=St) ->
     {reply, wd_children:info(C), St};
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.
 
+handle_cast({'$watchdog', {exit_all, Signal}}, #st_watchdog{children=C}=St) ->
+    wd_children:exit(C, Signal),
+    {noreply, St};
+handle_cast({'$watchdog', {exit_child, Id, Signal}}, #st_watchdog{children=C}=St) ->
+    wd_children:exit(C, Id, Signal),
+    {noreply, St};
 handle_cast({'$watchdog', stop}, St) ->
     {stop, normal, St};
 handle_cast(_R, St) ->

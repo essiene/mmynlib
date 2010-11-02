@@ -8,6 +8,7 @@
 -export([behaviour_info/1]).
 
 -record(st_watchdog, {sup, args, restart, num_children, children}).
+-record(wd_child, {id, starttime, startups, total_uptime}).
 
 behaviour_info(callbacks) ->
     [{init, 1}];
@@ -120,3 +121,19 @@ sched_restart_child(#st_watchdog{restart={_,Max,_}}, Id, Cur) when Cur >= Max ->
 sched_restart_child(#st_watchdog{restart={_,_,Delta}}, Id, Cur) ->
     Next = Cur + Delta,
     erlang:send_after(Cur, self(), {start_child, Id, Next}).
+
+child_new(Id) ->
+    StartTime = erlang:now(),
+    #wd_child{id=Id, starttime=StartTime, startups=1, total_uptime=0}.
+
+child_restarted(#wd_child{startups=Startups0}=Child) ->
+    StartTime = erlang:now(),
+    Child#wd_child{starttime=StartTime, startups=Startups0+1}.
+
+child_died(#wd_child{starttime=T0, total_uptime=Tup0}=Child0, #st_watchdog{children=Ets}) ->
+    T1 = erlang:now(),
+    Uptime = timer:now_diff(T1, T0),
+    Tup1 = Tup0 + Uptime,
+    Child1 = Child0#wd_child{total_uptime=Tup1},
+    ets:insert(Ets, Child1).
+

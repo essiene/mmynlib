@@ -7,7 +7,7 @@
 
 -export([behaviour_info/1]).
 
--record(st_watchdog, {sup, args, restart, num_children, children}).
+-record(st_watchdog, {sup, args, restart, num_children, children, pidmap}).
 -record(wd_child, {id, starttime, startups, total_uptime}).
 
 behaviour_info(callbacks) ->
@@ -52,7 +52,7 @@ init([watchdog, Mod|Args]) ->
                         {ok, #st_watchdog{sup=Pid, args=ChildArgs, 
                            restart=RestartSpec, num_children=NumChildren, 
                            children=ets:new(ets, [private, set, 
-                                   {keypos, 1}])}, 500}
+                                   {keypos, 2}]), pidmap=[]}, 500}
            end;
         ignore ->
             ignore;

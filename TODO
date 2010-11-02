@@ -3,6 +3,18 @@
     - restart_child(Pid, Id).
     - shutdown_child(Pid, Id).
     - kill_child(Pid, Id).
+    - num_children(Pid).
+    - add_child(Pid).
     - which_children(Pid) -> [{Id, Pid|undefined, 
                 last_start_time, numrestart, current_uptime, total_uptime, avguptime}]
+    - child_info/2
     - child_spec(Pid) -> ChildSpec
+
+    - think carefully about also monitoring:
+        - FailedStartTime: Last time the process failed to start
+        - FailedStartups: Number of time process has failed startup
+        
+        - DeathTime: Last time the process died while running
+        - Total Downtime: The cummulative total downtimes. Each
+          downtime is a measure of the time betwen the last DeathTime
+          and the time the process successfully restarts

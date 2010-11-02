@@ -1,5 +1,4 @@
 -module(watchdog).
--behaviour(supervisor).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
@@ -17,10 +16,10 @@ behaviour_info(_Other) ->
 
 
 start_link(Module, Args) ->
-    gen_server:start_link(?MODULE, [watchdog, Module|Args], []).
+    gen_server:start_link(?MODULE, [Module|Args], []).
 
 start_link(Name, Module, Args) ->
-    gen_server:start_link(Name, ?MODULE, [watchdog, Module|Args], []).
+    gen_server:start_link(Name, ?MODULE, [Module|Args], []).
 
 stop(Ref) ->
     gen_server:cast(Ref, {'$watchdog', stop}).
@@ -29,10 +28,7 @@ which_children(Ref) ->
     gen_server:call(Ref, {'$watchdog', which_children}).
 
 
-init([supervisor, MaxR, MaxT, ChildSpec]) ->
-    {ok, {{simple_one_for_one, MaxR, MaxT}, [ChildSpec]}};
-
-%% The init spec is now:
+% The init spec is now:
 % Mod:init/1 ->
 % {ok, ChildSpec, WatchDogSpec}
 %   ChildSpec is a normal child spec to a supervisor
@@ -40,13 +36,13 @@ init([supervisor, MaxR, MaxT, ChildSpec]) ->
 %       {NumChildren, {MaxRestart, MaxTime}, {MinWait, MaxWait, WaitDelta}}
 %       NumChildren -> integer()
 %
-init([watchdog, Mod|Args]) ->
+init([Mod|Args]) ->
     process_flag(trap_exit, true),
     case Mod:init(Args) of
         {ok, {ChildId, {M,F,ChildArgs}, _Restart, Shutdown, Type, Modules},
           {NumChildren, {MaxR, MaxT}, {_Min,_Max,_Delta}=RestartSpec}} ->
             ChildSpec = {ChildId, {M,F,[]}, temporary, Shutdown, Type, Modules},
-            case supervisor:start_link(?MODULE, [supervisor, MaxR, MaxT, ChildSpec]) of
+            case wd_child_sup:start_link(MaxR, MaxT, ChildSpec) of
                     ignore ->
                         ignore;
                     {error, Error} ->
@@ -113,7 +109,7 @@ start_all(#st_watchdog{restart={Min, _, _}}=St, ChildId) ->
     start_all(St, ChildId-1).
 
 start_child(#st_watchdog{sup=Sup, args=Args}=St, Id, Cur) -> 
-    case supervisor:start_child(Sup, [Id|Args]) of
+    case wd_child_sup:start_child(Sup, [Id|Args]) of
         {ok, Pid} ->
             St1 = child_started(St, Id, Pid),
             {noreply, St1};

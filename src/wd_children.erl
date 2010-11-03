@@ -1,10 +1,10 @@
 -module(wd_children).
+-include("watchdog.hrl").
+
 -export([new/0, info/1, info/2, process_down/2, process_up/3]).
 -export([child_new/1, child_restarted/1, child_died/2, child_info/2]).
 -export([exit/2, exit/3]).
 
--record(wd_children, {pidmap, ets}).
--record(wd_child, {id, starttime, startups, total_uptime}).
 
 
 new() ->

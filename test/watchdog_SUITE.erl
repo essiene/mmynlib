@@ -23,7 +23,8 @@ all() ->
     [{group, group1}].
 
 groups() ->
-    [{group1, [parallel], [create_watchdog, all_children_loaded, child_one_running]}].
+    [{group1, [parallel], [create_watchdog, all_children_loaded, 
+    child_info, manage_child, kill_one_child]}].
 
 create_watchdog(_Cfg) ->
     {ok, Wd} = wd:start_link(),
@@ -34,6 +35,25 @@ all_children_loaded(Cfg) ->
     All = watchdog:which_children(Wd),
     4 = length(All).
 
-child_one_running(Cfg) ->
+child_info(Cfg) ->
     Wd = ?config(wd, Cfg),
-    {1, _, _, 1, _,_,_} = watchdog:child_info(Wd, 1).
+    {1, _, _, 1, _,_,_} = watchdog:child_info(Wd, 1),
+    {2, _, _, 1, _,_,_} = watchdog:child_info(Wd, 2),
+    {3, _, _, 1, _,_,_} = watchdog:child_info(Wd, 3),
+    {4, _, _, 1, _,_,_} = watchdog:child_info(Wd, 4).
+
+manage_child(Cfg) ->
+    Wd = ?config(wd, Cfg),
+    {2, Pid0, _, 1, _,_,_} = watchdog:child_info(Wd, 2),
+    wd_child:stop(Pid0),
+    timer:sleep(100),
+    {2, down, _, 1, 0,_,_} = watchdog:child_info(Wd, 2),
+    timer:sleep(3000),
+    {2, Pid1, _, 2, _,_,_} = watchdog:child_info(Wd, 2),
+    true = is_pid(Pid1).
+
+kill_one_child(Cfg) ->
+    Wd = ?config(wd, Cfg),
+    ok = watchdog:kill_child(Wd, 4),
+    timer:sleep(100),
+    {4, down, _, 1, 0,_,_} = watchdog:child_info(Wd, 4).

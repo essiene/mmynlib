@@ -1,0 +1,37 @@
+Introduction
+============
+
+SPQ (Simple Persistent Queue) is really a poor man's persistent queue.
+
+It's implemented just so that there is an included persistent FIFO with
+esmetx for the new user that is easy to configure. The recommended way will
+always be to integrate with an external system like RabbitMQ or EjabberD.
+
+Architecture
+============
+SPQ is implemented as a gen_server.
+
+The main queue data structure is a lowly erlang LIST. Since its a FIFO, we
+only pre-pend to the head and take from the head as well, so push and pop
+is always O(1).
+
+SPQ keeps count of the LIST so there is no need to traverse it when getting
+the length of the queue. So the LENGTH OF operation is also O(1).
+
+Persistence is achieved simply by writing out the Lowly LIST to a DETS table.
+
+Note that the DETS is only read from when the gen_server started up. During
+normal operations, it is only written to.
+
+Right now, to keep things simple without affecting performance of the basic
+operations, this writing out is done periodically, by a spawned process so the
+main process that handles messages is not blocked.
+
+The implication of this type of persistence means that it is possible for data
+to be lost if the gen_server crashes before the next persistence cycle comes
+around.
+
+This is an accepted limitation as the solution to this is to use a proper
+persistent queue. This problem will not be given much thought.
+
+

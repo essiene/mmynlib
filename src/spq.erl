@@ -27,3 +27,18 @@ code_change(_OldVsn, St, _Extra) ->
     {ok, St}.
 
 
+schedule_persistence_timer(Freq) ->
+    erlang:send_after(Freq, self(), saveq).
+
+pstruct_load(Dets) ->
+    case dets:lookup(Dets, pstruct) of
+        {error, Reason} ->
+            {error, Reason};
+        [] ->
+            {ok, pstruct_new()};
+        [Pstruct] ->
+            {ok, Pstruct}
+    end.
+
+pstruct_new() ->
+    #pstruct{len=0, list=[]}.

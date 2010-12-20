@@ -31,6 +31,10 @@ handle_call(R, _F, St) ->
 handle_cast(_R, St) ->
     {noreply, St}.
 
+handle_info({self(), saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq}=St) ->
+    ok = pstruct_save(Pstruct, Dets),
+    schedule_persistence_timer(Freq),
+    {noreply, St};
 handle_info(_R, St) ->
     {noreply, St}.
 
@@ -42,7 +46,8 @@ code_change(_OldVsn, St, _Extra) ->
 
 
 schedule_persistence_timer(Freq) ->
-    erlang:send_after(Freq, self(), saveq).
+    Self = self(),
+    erlang:send_after(Freq, Self, {Self, saveq}).
 
 pstruct_load(Dets) ->
     case dets:lookup(Dets, pstruct) of
@@ -56,3 +61,11 @@ pstruct_load(Dets) ->
 
 pstruct_new() ->
     #pstruct{len=0, list=[]}.
+
+pstruct_save(Pstruct, Dets) ->
+    case dets:insert(Dets, Pstruct) of
+        {error, Reason} ->
+            {error, Reason};
+        ok ->
+            ok
+    end.

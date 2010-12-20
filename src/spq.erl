@@ -8,8 +8,22 @@
 -record(pstruct, {len, list}).
 
 
-init([]) ->
-    {ok, nil}.
+init([Filename, Freq]) ->
+    case dets:open_file(Filename, [{repair, force}, {type, set},
+                 {keypos, 1}]) of
+         {error, Reason} ->
+             {stop, Reason};
+         {ok, Filename} ->
+             case pstruct_load(Filename) of
+                 {error, Reason} ->
+                     {stop, Reason};
+                 {ok, Pstruct} ->
+                     schedule_persistence_timer(Freq),
+                     St = #st_spq{dets=Filename, ptime=Freq, pstruct=Pstruct},
+                     {ok, St}
+             end
+     end.
+
 
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.

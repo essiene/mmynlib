@@ -7,7 +7,7 @@
          terminate/2,code_change/3]).
 
 -record(st_spq, {dets, ptime, pstruct, self}).
--record(pstruct, {len, list}).
+-record(pstruct, {len, q}).
 
 open(Filename) ->
     open(Filename, 5000).
@@ -77,7 +77,7 @@ pstruct_load(Dets) ->
     end.
 
 pstruct_new() ->
-    #pstruct{len=0, list=[]}.
+    #pstruct{len=0, q=queue:new()}.
 
 pstruct_save(Pstruct, Dets) ->
     case dets:insert(Dets, Pstruct) of

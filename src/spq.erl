@@ -4,7 +4,7 @@
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
 
--record(st_spq, {dets, ptime, pstruct}).
+-record(st_spq, {dets, ptime, pstruct, self}).
 -record(pstruct, {len, list}).
 
 
@@ -19,7 +19,7 @@ init([Filename, Freq]) ->
                      {stop, Reason};
                  {ok, Pstruct} ->
                      schedule_persistence_timer(Freq),
-                     St = #st_spq{dets=Filename, ptime=Freq, pstruct=Pstruct},
+                     St = #st_spq{dets=Filename, ptime=Freq, pstruct=Pstruct, self=self()},
                      {ok, St}
              end
      end.
@@ -31,7 +31,7 @@ handle_call(R, _F, St) ->
 handle_cast(_R, St) ->
     {noreply, St}.
 
-handle_info({self(), saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq}=St) ->
+handle_info({S, saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq, self=S}=St) ->
     ok = pstruct_save(Pstruct, Dets),
     schedule_persistence_timer(Freq),
     {noreply, St};

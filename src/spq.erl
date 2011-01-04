@@ -1,11 +1,24 @@
 -module(spq).
 -behaviour(gen_server).
 
+-export([open/1, open/2,close/1]).
+
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
 
 -record(st_spq, {dets, ptime, pstruct, self}).
 -record(pstruct, {len, list}).
+
+open(Filename) ->
+    open(Filename, 5000).
+
+open(Filename, Freq) ->
+    gen_server:start(?MODULE, [Filename, Freq], []).
+
+close(Ref) ->
+    gen_server:call(Ref, close).
+
+
 
 
 init([Filename, Freq]) ->
@@ -24,6 +37,10 @@ init([Filename, Freq]) ->
              end
      end.
 
+
+handle_call(close, _, #st_spq{pstruct=Pstruct, dets=Dets}=St) ->
+    pstruct_save(Pstruct, Dets),
+    {stop, normal, ok, St};
 
 handle_call(R, _F, St) ->
     {reply, {error, R}, St}.

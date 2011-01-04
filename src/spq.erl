@@ -2,6 +2,7 @@
 -behaviour(gen_server).
 
 -export([open/1, open/2,close/1]).
+-export([push/2]).
 
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
@@ -17,6 +18,9 @@ open(Filename, Freq) ->
 
 close(Ref) ->
     gen_server:call(Ref, close).
+
+push(Ref, Item) ->
+    gen_server:call(Ref, {push, Item}).
 
 
 
@@ -37,6 +41,10 @@ init([Filename, Freq]) ->
              end
      end.
 
+
+handle_call({push, Item}, _, #st_spq{pstruct=Pstruct0}=St) ->
+    Pstruct1 = pstruct_push(Pstruct0, Item),
+    {reply, ok, St#st_spq{pstruct=Pstruct1}};
 
 handle_call(close, _, #st_spq{pstruct=Pstruct, dets=Dets}=St) ->
     pstruct_save(Pstruct, Dets),
@@ -86,3 +94,7 @@ pstruct_save(Pstruct, Dets) ->
         ok ->
             ok
     end.
+
+pstruct_push(#pstruct{len=Len0, q=Q0}=Pstruct0, Item) ->
+    Q1 = queue:in(Item, Q0),
+    Pstruct0#pstruct{len=Len0+1, q=Q1}.

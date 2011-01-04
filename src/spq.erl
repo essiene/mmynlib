@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 -export([open/1, open/2,close/1]).
--export([push/2, len/1]).
+-export([push/2, len/1, pop/1]).
 
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
@@ -25,6 +25,9 @@ push(Ref, Item) ->
 len(Ref) ->
     gen_server:call(Ref, len).
 
+pop(Ref) ->
+    gen_server:call(Ref, pop).
+
 
 
 
@@ -44,6 +47,10 @@ init([Filename, Freq]) ->
              end
      end.
 
+
+handle_call(pop, _, #st_spq{pstruct=P0}=St) ->
+    {P1, Result} = pstruct_pop(P0),
+    {reply, Result, St#st_spq{pstruct=P1}};
 
 handle_call(len, _, #st_spq{pstruct=P}=St) ->
     {reply, pstruct_len(P), St};
@@ -107,3 +114,13 @@ pstruct_push(#pstruct{len=Len0, q=Q0}=Pstruct0, Item) ->
 
 pstruct_len(#pstruct{len=Len}) ->
     Len.
+
+pstruct_pop(#pstruct{len=L0, q=Q0}=P0) ->
+    try queue:get(Q0) of
+        Item ->
+            Q1 = queue:drop(Q0),
+            {P0#pstruct{len=L0-1, q=Q1}, {value, Item}}
+     catch 
+         error: empty ->
+            {P0, {error, empty}}
+    end.

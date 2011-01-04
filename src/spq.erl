@@ -94,11 +94,14 @@ pstruct_load(Dets) ->
         [] ->
             {ok, pstruct_new()};
         [Pstruct] ->
-            {ok, Pstruct}
+            {ok, pstruct_sanitize(Pstruct)}
     end.
 
 pstruct_new() ->
     #pstruct{len=0, q=queue:new()}.
+
+pstruct_sanitize(#pstruct{q=Q}) ->
+    #pstruct{len=queue:len(Q), q=Q}.
 
 pstruct_save(Pstruct, Dets) ->
     case dets:insert(Dets, Pstruct) of

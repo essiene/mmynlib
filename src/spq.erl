@@ -178,3 +178,22 @@ schedule_apop_timer(Freq) ->
     Self = self(),
     erlang:send_after(Freq, Self, {Self, perform_apop}).
 
+handle_apop_timer(#apop_struct{freq=F, q=Q0}=A0, Fun) ->
+    case queue:out(Q0) of
+        {empty, Q0} ->
+            schedule_apop_timer(F),
+            A0;
+        {{value, #apop_req{sender=S, count=C, ref=Ref}}, Q1} ->
+            case is_process_alive(S) of
+                true -> 
+                    case catch(Fun(S, C, Ref)) of
+                        ok ->
+                            ok;
+                        Other ->
+                            error_logger:error_msg("Error handling APOP request: ~p~n", [Other])
+                    end;
+                false ->
+                    ok
+            end,
+            handle_apop_timer(A0#apop_struct{q=Q1}, Fun)
+    end.

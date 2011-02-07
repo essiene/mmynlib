@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 -export([open/1, open/2,close/1]).
--export([push/2, len/1, pop/1, pop/2]).
+-export([push/2, len/1, pop/1, pop/2, apop/2]).
 
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
@@ -33,6 +33,8 @@ pop(Ref) ->
 pop(Ref, Count) ->
     gen_server:call(Ref, {pop, Count}).
 
+apop(Ref, Count) ->
+    gen_server:call(Ref, {apop, self(), Count}).
 
 
 
@@ -58,6 +60,10 @@ init([Filename, Freq, ApopSvcFreq]) ->
                      end
              end
      end.
+
+handle_call({apop, Sender, Count}, _, #st_spq{apop_struct=A0}=St) ->
+    {A1, Ref} = apop_struct_new_req(A0, Sender, Count),
+    {reply, {ok, Ref}, St#st_spq{apop_struct=A1}};
 
 handle_call({pop, Count}, _, #st_spq{pstruct=P0}=St) ->
     {P1, Result} = pstruct_pop(P0, Count),

@@ -9,6 +9,7 @@
 
 -record(st_spq, {dets, ptime, pstruct, self}).
 -record(pstruct, {len, q}).
+-record(apop_struct, {freq, q}).
 
 open(Filename) ->
     open(Filename, 5000).
@@ -146,3 +147,14 @@ pstruct_pop(P0, Count, Accm) ->
         {P1, {value, Item}} ->
             pstruct_pop(P1, Count-1, [Item|Accm])
     end.
+
+
+apop_struct_new(Freq) ->
+    schedule_apop_timer(Freq),
+    #apop_struct{freq=Freq, q=queue:new()}.
+
+
+schedule_apop_timer(Freq) ->
+    Self = self(),
+    erlang:send_after(Freq, Self, {Self, perform_apop}).
+

@@ -7,7 +7,7 @@
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
 
--record(st_spq, {dets, ptime, pstruct, self}).
+-record(st_spq, {dets, ptime, pstruct, self, apop_struct}).
 -record(pstruct, {len, q}).
 -record(apop_struct, {freq, q}).
 
@@ -35,7 +35,8 @@ pop(Ref, Count) ->
 
 
 
-init([Filename, Freq]) ->
+
+init([Filename, Freq, ApopSvcFreq]) ->
     case dets:open_file(Filename, [{repair, force}, {type, set},
                  {keypos, 1}]) of
          {error, Reason} ->
@@ -46,8 +47,14 @@ init([Filename, Freq]) ->
                      {stop, Reason};
                  {ok, Pstruct} ->
                      schedule_persistence_timer(Freq),
-                     St = #st_spq{dets=Filename, ptime=Freq, pstruct=Pstruct, self=self()},
-                     {ok, St}
+                     case apop_struct_new(ApopSvcFreq) of
+                         {error, Reason} ->
+                             {stop, Reason};
+                         {ok, ApopStruct} ->
+                             St = #st_spq{dets=Filename, ptime=Freq, pstruct=Pstruct, 
+                                          self=self(), apop_struct=ApopStruct},
+                             {ok, St}
+                     end
              end
      end.
 

@@ -61,6 +61,12 @@ init([Filename, Freq, ApopSvcFreq]) ->
              end
      end.
 
+handle_call(ping, _, #st_spq{pstruct=P, apop_struct=A}=St) ->
+    Qlen = pstruct_len(P),
+    ApopLen = apop_struct_len(A),
+    Reply = [{qlen, Qlen}, {apop_req_q, ApopLen}],
+    {reply, Reply, St};
+
 handle_call({apop, Sender, Count}, _, #st_spq{apop_struct=A0}=St) ->
     {A1, Ref} = apop_struct_new_req(A0, Sender, Count),
     {reply, {ok, Ref}, St#st_spq{apop_struct=A1}};
@@ -172,6 +178,9 @@ apop_struct_new_req(#apop_struct{q=Q0}=A0, S, C) ->
     Req = #apop_req{sender=S, count=C, ref=Ref},
     Q1 = queue:in(Req, Q0),
     {A0#apop_struct{q=Q1}, Ref}.
+
+apop_struct_len(#apop_struct{q=Q}) ->
+    queue:len(Q).
 
 
 schedule_apop_timer(Freq) ->

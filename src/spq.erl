@@ -102,6 +102,19 @@ handle_call(R, _F, St) ->
 handle_cast(_R, St) ->
     {noreply, St}.
 
+handle_info({S, perform_apop}, #st_spq{pstruct=P0, self=S, apop_struct=A0}=St) ->
+    Fun = fun(Pstruct0, Sender, Count, Ref) ->
+            case pstruct_pop(Pstruct0, Count) of
+                {Pstruct1, []} ->
+                    {nop, Pstruct1};
+                {Pstruct1, Items} -> 
+                    Sender ! {Ref, qdata, Items}, 
+                    {ok, Pstruct1}
+            end
+    end,
+    {A1, P1} = handle_apop_timer(A0, Fun, P0),
+    {noreply, St#st_spq{apop_struct=A1, pstruct=P1}};
+
 handle_info({S, saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq, self=S}=St) ->
     ok = pstruct_save(Pstruct, Dets),
     schedule_persistence_timer(Freq),

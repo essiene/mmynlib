@@ -165,7 +165,7 @@ pstruct_pop(P0, Count, Accm) ->
 
 apop_struct_new(Freq) ->
     schedule_apop_timer(Freq),
-    #apop_struct{freq=Freq, q=queue:new()}.
+    {ok, #apop_struct{freq=Freq, q=queue:new()}}.
 
 apop_struct_new_req(#apop_struct{q=Q0}=A0, S, C) ->
     Ref = make_ref(),

@@ -1,8 +1,8 @@
 -module(spq).
 -behaviour(gen_server).
 
--export([open/1, open/2,close/1]).
--export([push/2, len/1, pop/1, pop/2, apop/2]).
+-export([open/1, open/2,open/3, close/1]).
+-export([push/2, len/1, pop/1, pop/2, apop/2, ping/1]).
 
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,
          terminate/2,code_change/3]).
@@ -16,13 +16,19 @@ open(Filename) ->
     open(Filename, 5000).
 
 open(Filename, Freq) ->
-    gen_server:start(?MODULE, [Filename, Freq], []).
+    gen_server:start(?MODULE, [Filename, Freq, Freq], []).
+
+open(Filename, Freq, ApopFreq) ->
+    gen_server:start(?MODULE, [Filename, Freq, ApopFreq], []).
 
 close(Ref) ->
     gen_server:call(Ref, close).
 
 push(Ref, Item) ->
     gen_server:call(Ref, {push, Item}).
+
+ping(Ref) ->
+    gen_server:call(Ref, ping).
 
 len(Ref) ->
     gen_server:call(Ref, len).

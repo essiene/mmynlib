@@ -8,7 +8,6 @@
          terminate/2,code_change/3]).
 
 -record(st_spq, {dets, ptime, pstruct, self, apop_struct}).
--record(pstruct, {len, q}).
 -record(apop_struct, {freq, q}).
 -record(apop_req, {sender, count, ref}).
 
@@ -51,7 +50,7 @@ init([Filename, Freq, ApopSvcFreq]) ->
          {error, Reason} ->
              {stop, Reason};
          {ok, Filename} ->
-             case pstruct_load(Filename) of
+             case spq_pstruct:load(Filename) of
                  {error, Reason} ->
                      {stop, Reason};
                  {ok, Pstruct} ->
@@ -68,7 +67,7 @@ init([Filename, Freq, ApopSvcFreq]) ->
      end.
 
 handle_call(ping, _, #st_spq{pstruct=P, apop_struct=A}=St) ->
-    Qlen = pstruct_len(P),
+    Qlen = spq_pstruct:len(P),
     ApopLen = apop_struct_len(A),
     Reply = [{qlen, Qlen}, {apop_req_q, ApopLen}],
     {reply, Reply, St};
@@ -78,22 +77,22 @@ handle_call({apop, Sender, Count}, _, #st_spq{apop_struct=A0}=St) ->
     {reply, {ok, Ref}, St#st_spq{apop_struct=A1}};
 
 handle_call({pop, Count}, _, #st_spq{pstruct=P0}=St) ->
-    {P1, Result} = pstruct_pop(P0, Count),
+    {P1, Result} = spq_pstruct:pop(P0, Count),
     {reply, Result, St#st_spq{pstruct=P1}};
 
 handle_call(pop, _, #st_spq{pstruct=P0}=St) ->
-    {P1, Result} = pstruct_pop(P0),
+    {P1, Result} = spq_pstruct:pop(P0),
     {reply, Result, St#st_spq{pstruct=P1}};
 
 handle_call(len, _, #st_spq{pstruct=P}=St) ->
-    {reply, pstruct_len(P), St};
+    {reply, spq_pstruct:len(P), St};
 
 handle_call({push, Item}, _, #st_spq{pstruct=Pstruct0}=St) ->
-    Pstruct1 = pstruct_push(Pstruct0, Item),
+    Pstruct1 = spq_pstruct:push(Pstruct0, Item),
     {reply, ok, St#st_spq{pstruct=Pstruct1}};
 
 handle_call(close, _, #st_spq{pstruct=Pstruct, dets=Dets}=St) ->
-    pstruct_save(Pstruct, Dets),
+    spq_pstruct:save(Pstruct, Dets),
     {stop, normal, ok, St};
 
 handle_call(R, _F, St) ->
@@ -104,7 +103,7 @@ handle_cast(_R, St) ->
 
 handle_info({S, perform_apop}, #st_spq{pstruct=P0, self=S, apop_struct=A0}=St) ->
     Fun = fun(Pstruct0, Sender, Count, Ref) ->
-            case pstruct_pop(Pstruct0, Count) of
+            case spq_pstruct:pop(Pstruct0, Count) of
                 {Pstruct1, []} ->
                     {nop, Pstruct1};
                 {Pstruct1, Items} -> 
@@ -116,7 +115,7 @@ handle_info({S, perform_apop}, #st_spq{pstruct=P0, self=S, apop_struct=A0}=St) -
     {noreply, St#st_spq{apop_struct=A1, pstruct=P1}};
 
 handle_info({S, saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq, self=S}=St) ->
-    ok = pstruct_save(Pstruct, Dets),
+    ok = spq_pstruct:save(Pstruct, Dets),
     schedule_persistence_timer(Freq),
     {noreply, St};
 handle_info(_R, St) ->
@@ -133,59 +132,6 @@ schedule_persistence_timer(Freq) ->
     Self = self(),
     erlang:send_after(Freq, Self, {Self, saveq}).
 
-pstruct_load(Dets) ->
-    case dets:lookup(Dets, pstruct) of
-        {error, Reason} ->
-            {error, Reason};
-        [] ->
-            {ok, pstruct_new()};
-        [Pstruct] ->
-            {ok, pstruct_sanitize(Pstruct)}
-    end.
-
-pstruct_new() ->
-    #pstruct{len=0, q=queue:new()}.
-
-pstruct_sanitize(#pstruct{q=Q}) ->
-    #pstruct{len=queue:len(Q), q=Q}.
-
-pstruct_save(Pstruct, Dets) ->
-    case dets:insert(Dets, Pstruct) of
-        {error, Reason} ->
-            {error, Reason};
-        ok ->
-            ok
-    end.
-
-pstruct_push(#pstruct{len=Len0, q=Q0}=Pstruct0, Item) ->
-    Q1 = queue:in(Item, Q0),
-    Pstruct0#pstruct{len=Len0+1, q=Q1}.
-
-pstruct_len(#pstruct{len=Len}) ->
-    Len.
-
-pstruct_pop(#pstruct{len=L0, q=Q0}=P0) ->
-    try queue:get(Q0) of
-        Item ->
-            Q1 = queue:drop(Q0),
-            {P0#pstruct{len=L0-1, q=Q1}, {value, Item}}
-     catch 
-         error: empty ->
-            {P0, {error, empty}}
-    end.
-
-pstruct_pop(P, Count) ->
-    pstruct_pop(P, Count, []).
-
-pstruct_pop(P, 0, Accm) ->
-    {P, lists:reverse(Accm)};
-pstruct_pop(P0, Count, Accm) ->
-    case pstruct_pop(P0) of
-        {P0, {error, empty}} ->
-            {P0, lists:reverse(Accm)};
-        {P1, {value, Item}} ->
-            pstruct_pop(P1, Count-1, [Item|Accm])
-    end.
 
 
 apop_struct_new(Freq) ->

@@ -10,9 +10,9 @@ new(Freq) ->
     {ok, #apop_struct{freq=Freq, q=queue:new()}}.
 
 new_req(#apop_struct{q=Q0}=A0, S, C) ->
-    Ref = make_ref(),
-    Req = #apop_req{sender=S, count=C, ref=Ref},
-    Q1 = queue:in(Req, Q0),
+    Req = #apop_req{sender=S, count=C},
+    {Qitem, Ref} = qitem:new(Req),
+    Q1 = queue:in(Qitem, Q0),
     {A0#apop_struct{q=Q1}, Ref}.
 
 len(#apop_struct{q=Q}) ->

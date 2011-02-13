@@ -6,7 +6,7 @@
 
 new(D) ->
     N = erlang:now(),
-    Id = qid(),
+    Id = qid(N),
     {#qitem{id=Id, tin=N, data=D}, Id}.
 
 get_data(#qitem{data=D}=Q) ->

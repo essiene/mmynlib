@@ -45,7 +45,8 @@ len(#struct{len=Len}) ->
 
 pop(#struct{len=L0, q=Q0}=P0) ->
     try queue:get(Q0) of
-        Item ->
+        Qitem0 ->
+            {_, Item} = qitem:get_data(Qitem0),
             Q1 = queue:drop(Q0),
             {P0#struct{len=L0-1, q=Q1}, {value, Item}}
      catch 

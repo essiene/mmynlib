@@ -36,8 +36,9 @@ save(Pstruct, Dets) ->
     end.
 
 push(#struct{len=Len0, q=Q0}=Pstruct0, Item) ->
-    Q1 = queue:in(Item, Q0),
-    Pstruct0#struct{len=Len0+1, q=Q1}.
+    {Qitem, Id} = qitem:new(Item),
+    Q1 = queue:in(Qitem, Q0),
+    {Pstruct0#struct{len=Len0+1, q=Q1}, Id}.
 
 len(#struct{len=Len}) ->
     Len.

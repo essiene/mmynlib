@@ -86,8 +86,8 @@ handle_call(len, _, #st_spq{pstruct=P}=St) ->
     {reply, spq_pstruct:len(P), St};
 
 handle_call({push, Item}, _, #st_spq{pstruct=Pstruct0}=St) ->
-    Pstruct1 = spq_pstruct:push(Pstruct0, Item),
-    {reply, ok, St#st_spq{pstruct=Pstruct1}};
+    {Pstruct1, Qid} = spq_pstruct:push(Pstruct0, Item),
+    {reply, {ok, Qid}, St#st_spq{pstruct=Pstruct1}};
 
 handle_call(close, _, #st_spq{pstruct=Pstruct, dets=Dets}=St) ->
     spq_pstruct:save(Pstruct, Dets),

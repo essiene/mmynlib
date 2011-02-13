@@ -8,8 +8,6 @@
          terminate/2,code_change/3]).
 
 -record(st_spq, {dets, ptime, pstruct, self, apop_struct}).
--record(apop_struct, {freq, q}).
--record(apop_req, {sender, count, ref}).
 
 open(Filename) ->
     open(Filename, 5000).
@@ -55,7 +53,7 @@ init([Filename, Freq, ApopSvcFreq]) ->
                      {stop, Reason};
                  {ok, Pstruct} ->
                      schedule_persistence_timer(Freq),
-                     case apop_struct_new(ApopSvcFreq) of
+                     case apop_struct:new(ApopSvcFreq) of
                          {error, Reason} ->
                              {stop, Reason};
                          {ok, ApopStruct} ->
@@ -68,12 +66,12 @@ init([Filename, Freq, ApopSvcFreq]) ->
 
 handle_call(ping, _, #st_spq{pstruct=P, apop_struct=A}=St) ->
     Qlen = spq_pstruct:len(P),
-    ApopLen = apop_struct_len(A),
+    ApopLen = apop_struct:len(A),
     Reply = [{qlen, Qlen}, {apop_req_q, ApopLen}],
     {reply, Reply, St};
 
 handle_call({apop, Sender, Count}, _, #st_spq{apop_struct=A0}=St) ->
-    {A1, Ref} = apop_struct_new_req(A0, Sender, Count),
+    {A1, Ref} = apop_struct:new_req(A0, Sender, Count),
     {reply, {ok, Ref}, St#st_spq{apop_struct=A1}};
 
 handle_call({pop, Count}, _, #st_spq{pstruct=P0}=St) ->
@@ -111,7 +109,7 @@ handle_info({S, perform_apop}, #st_spq{pstruct=P0, self=S, apop_struct=A0}=St) -
                     {ok, Pstruct1}
             end
     end,
-    {A1, P1} = handle_apop_timer(A0, Fun, P0),
+    {A1, P1} = apop_struct:handle_timer(A0, Fun, P0),
     {noreply, St#st_spq{apop_struct=A1, pstruct=P1}};
 
 handle_info({S, saveq}, #st_spq{dets=Dets, pstruct=Pstruct, ptime=Freq, self=S}=St) ->
@@ -131,46 +129,3 @@ code_change(_OldVsn, St, _Extra) ->
 schedule_persistence_timer(Freq) ->
     Self = self(),
     erlang:send_after(Freq, Self, {Self, saveq}).
-
-
-
-apop_struct_new(Freq) ->
-    schedule_apop_timer(Freq),
-    {ok, #apop_struct{freq=Freq, q=queue:new()}}.
-
-apop_struct_new_req(#apop_struct{q=Q0}=A0, S, C) ->
-    Ref = make_ref(),
-    Req = #apop_req{sender=S, count=C, ref=Ref},
-    Q1 = queue:in(Req, Q0),
-    {A0#apop_struct{q=Q1}, Ref}.
-
-apop_struct_len(#apop_struct{q=Q}) ->
-    queue:len(Q).
-
-
-schedule_apop_timer(Freq) ->
-    Self = self(),
-    erlang:send_after(Freq, Self, {Self, perform_apop}).
-
-handle_apop_timer(#apop_struct{freq=F, q=Q0}=A0, Fun, Accm0) ->
-    case queue:out(Q0) of
-        {empty, Q0} ->
-            schedule_apop_timer(F),
-            {A0, Accm0};
-        {{value, #apop_req{sender=S, count=C, ref=Ref}}, Q1} ->
-            case is_process_alive(S) of
-                true -> 
-                    case catch(Fun(Accm0, S, C, Ref)) of
-                        {ok, Accm1} ->
-                            handle_apop_timer(A0#apop_struct{q=Q1}, Fun, Accm1);
-                        {nop, Accm1} ->
-                            schedule_apop_timer(F),
-                            {A0, Accm1};
-                        Other ->
-                            error_logger:error_msg("Error handling APOP request: ~p~n", [Other]),
-                            handle_apop_timer(A0#apop_struct{q=Q1}, Fun, Accm0)
-                    end;
-                false -> 
-                    ok
-            end
-    end.

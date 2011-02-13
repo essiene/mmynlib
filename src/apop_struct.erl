@@ -2,7 +2,7 @@
 -export([new/1,new_req/3,len/1,schedule_timer/1,handle_timer/3]).
 
 -record(apop_struct, {freq, q}).
--record(apop_req, {sender, count, ref}).
+-record(apop_req, {sender, count}).
 
 
 new(Freq) ->
@@ -28,7 +28,9 @@ handle_timer(#apop_struct{freq=F, q=Q0}=A0, Fun, Accm0) ->
         {empty, Q0} ->
             schedule_timer(F),
             {A0, Accm0};
-        {{value, #apop_req{sender=S, count=C, ref=Ref}}, Q1} ->
+        {{value, Qitem0}, Q1} ->
+            {Qitem1, #apop_req{sender=S, count=C}} = qitem:get_data(Qitem0),
+            {Ref, _T1, _T2} = qitem:stats(Qitem1),
             case is_process_alive(S) of
                 true -> 
                     case catch(Fun(Accm0, S, C, Ref)) of

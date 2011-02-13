@@ -1,12 +1,11 @@
-{application, esmetx,
+{application, mmynlib,
  [
-  {description, ""},
+  {description, "A collection of utilities needed by Mmayen, but generally usefull"},
   {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { esmetx_app, []}},
   {env, []}
  ]}.

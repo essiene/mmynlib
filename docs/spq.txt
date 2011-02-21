@@ -11,14 +11,11 @@ Architecture
 ============
 SPQ is implemented as a gen_server.
 
-The main queue data structure is a lowly erlang LIST. Since its a FIFO, we
-only pre-pend to the head and take from the head as well, so push and pop
-is always O(1).
+SPQ just wraps up the erlang Queue module with rudimentary persistence. 
+Nothing fancy, it will do for small deployments, but don't expect too
+much from this.
 
-SPQ keeps count of the LIST so there is no need to traverse it when getting
-the length of the queue. So the LENGTH OF operation is also O(1).
-
-Persistence is achieved simply by writing out the Lowly LIST to a DETS table.
+Persistence is achieved simply by writing out the Lowly Queue to a DETS table.
 
 Note that the DETS is only read from when the gen_server started up. During
 normal operations, it is only written to.

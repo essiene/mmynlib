@@ -1,15 +1,8 @@
-esmetx is a high-throughput standalone ESME transmitter
+Mmynlib is a collection of functionality that are used by the Mmayen
+SMPP gateway server, but do not logically belong in Mmayen.
 
-Initial support is on SMPP 3.4 only by making use
-of smpp34 and smpp34pdu libraries.
+Contents
+========
 
-The basic idea behind esmetx is to encapsulate a queue
-and a configurable number of high performing transmitter
-channels to achieve a simple to use, highly configurable
-and highly performant SMPP ESME transmitter.
-
-Initially, the queue will be based on an internal implementation
-but will later be extended to include support for using a RabbitMQ
-instance or an EjabberD as the queue.
-
-
+1. watchdog - A simple_one_for_one like supervisor 
+2. spq - A Simple Persistent Queue

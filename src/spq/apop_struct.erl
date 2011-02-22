@@ -32,6 +32,8 @@ handle_timer(#apop_struct{freq=F, q=Q0}=A0, Fun, Accm0) ->
             {Qitem1, #apop_req{sender=S, count=C}} = qitem:get_data(Qitem0),
             {Ref, _T1, _T2} = qitem:stats(Qitem1),
             case is_process_alive(S) of
+                false -> 
+                    handle_timer(A0#apop_struct{q=Q1}, Fun, Accm0});
                 true -> 
                     case catch(Fun(Accm0, S, C, Ref)) of
                         {ok, Accm1} ->
@@ -42,8 +44,6 @@ handle_timer(#apop_struct{freq=F, q=Q0}=A0, Fun, Accm0) ->
                         Other ->
                             error_logger:error_msg("Error handling APOP request: ~p~n", [Other]),
                             handle_timer(A0#apop_struct{q=Q1}, Fun, Accm0)
-                    end;
-                false -> 
-                    ok
+                    end
             end
     end.

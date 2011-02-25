@@ -64,7 +64,7 @@ pop(P0, Count, Accm) ->
         {P0, {error, empty}} ->
             {P0, lists:reverse(Accm)};
         {P1, {value, Item}} ->
-            pop(P1, Count-1, [Item|Accm])
+            pop(P1, Count - 1, [Item|Accm])
     end.
 
 
